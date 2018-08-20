@@ -38,10 +38,11 @@ static void* usage(const char* port)
         exit(2);
     }
     char buf[1024];
-
+    char comm_buf[10][50];
+    int comm_cnt = 0;
     struct sockaddr_in client;
-    socklen_t len = sizeof(client);  
-    char* msg = "Hello for server!\r\n";
+    socklen_t len = sizeof(client);
+  
     while(1)
     { 
        //读取数据
@@ -53,15 +54,30 @@ static void* usage(const char* port)
        }
        else
        { 
-            buf[r] = 0;                       
+            buf[r] = '\0';                       
             printf("[%s : %d]#  %s\n",inet_ntoa(client.sin_addr), ntohs(client.sin_port),buf);  
-
-            //回送数据
-            if(sendto(sock,msg,strlen(msg),0,(struct sockaddr*)&client,len)<0)
-            { 
-                perror("sendto");
-                exit(4);
-            }
+            if(strcmp(inet_ntoa(client.sin_addr),"106.12.94.71")==0)
+	    {
+		if((r<48)&&(comm_cnt<10))
+		{
+		     strcpy(comm_buf[comm_cnt],buf);
+		     strcat(comm_buf[comm_cnt++],"\r\n");
+	             if(comm_cnt==10) comm_cnt = 0;	
+		}
+	    }
+	    else
+	    {
+                if(comm_cnt>0)
+		{
+		     comm_cnt--;		
+                     //回送数据
+                     if(sendto(sock,comm_buf[comm_cnt],strlen(comm_buf[comm_cnt]),0,(struct sockaddr*)&client,len)<0)
+                     { 
+                          perror("sendto");
+                          exit(4);
+               	     }
+                }
+	    }
 //            break;
        }
     }
