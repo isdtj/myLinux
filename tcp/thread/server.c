@@ -6,6 +6,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>					
 #include <pthread.h>
+#include <time.h>
  
 pthread_mutex_t mutex;	// 定义互斥锁，全局变量
  
@@ -21,16 +22,28 @@ void *client_process(void *arg)
 	char recv_buf[1024] = "";	// 接收缓冲区
 	int connfd = *(int *)arg; // 传过来的已连接套接字
 	static int thread_num = 0;
+	struct sockaddr_in clients_addr;
+        int length = sizeof(clients_addr);
+        int i;
+	time_t timep;
+
         thread_num++;
-        printf("client num:%d\n",thread_num);
+        printf("client process cnt:%d\n",thread_num);
 	// 解锁，pthread_mutex_lock()唤醒，不阻塞
 	pthread_mutex_unlock(&mutex); 
         	
 	// 接收数据
 	while((recv_len = recv(connfd, recv_buf, sizeof(recv_buf), 0)) > 0)
 	{
-		printf("recv_buf: %s\n", recv_buf); // 打印数据
-		send(connfd, recv_buf, recv_len, 0); // 给客户端回数据
+		time(&timep);
+		getpeername(connfd,(struct sockaddr*)&clients_addr,&length);
+		printf("%s,%s/ recv:",inet_ntoa(clients_addr.sin_addr),ctime(&timep)); // 打印数据
+		for(i=0;i<recv_len;i++)
+                {
+			printf("%X ",recv_buf[i]);
+                }
+		printf("\r\n");
+//		send(connfd, recv_buf, recv_len, 0); // 给客户端回数据
 	}
 	
 	printf("client closed!\n");
@@ -51,7 +64,7 @@ int main(int argc, char *argv[])
 	int connfd = 0;
 	int err_log = 0;
 	struct sockaddr_in my_addr;	// 服务器地址结构体
-	unsigned short port = 8013; // 监听端口
+	unsigned short port = 8014; // 监听端口
 	pthread_t thread_id;
 	
 	pthread_mutex_init(&mutex, NULL); // 初始化互斥锁，互斥锁默认是打开的
